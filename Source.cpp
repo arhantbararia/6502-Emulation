@@ -3,7 +3,24 @@
 
 using Byte = unsigned char;			// used for 8 bits 
 using word = unsigned short;		// used for 16 bits 
+using u32 = unsigned int;			// used for 32 bits 
 
+struct mem
+{
+	static constexpr u32 MEM_MAX = 1024 * 64;
+	Byte DATA[MEM_MAX];
+	
+	void initialise()
+	{
+		for (u32 i = 0; i < MEM_MAX; i++)
+		{	
+			DATA[i] = 0;
+
+		}
+
+	}
+
+};
 struct CPU
 {
 	word PC;		// program counter
@@ -28,7 +45,16 @@ struct CPU
 	Byte V : 1;		//Overflow flag
 	Byte N : 1;		// Negative flag 
 	
-	
+	void Reset(mem& Memory)
+	{
+		PC = 0xFFFC;
+		SP = 0x0100;
+		C = Z = I = D = B = V = N = 0;
+		A = X = Y = 0;
+
+		Memory.initialise();
+
+	}
 
 };
 
@@ -36,6 +62,7 @@ struct CPU
 int main()
 {
 	CPU cpu;
-
+	mem MEMORY;
 	return 0; 
+	cpu.Reset(MEMORY);
 }
