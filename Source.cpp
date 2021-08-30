@@ -14,7 +14,7 @@ struct MEM
 	{
 		for (u32 i = 0; i < MEM_MAX; i++)
 		{	
-			DATA[i] = 0;
+		  	DATA[i] = 0;
 
 		}
 
@@ -24,6 +24,13 @@ struct MEM
 	Byte operator[](u32 Address) const
 	{
 		return DATA[Address];
+	}
+
+	// write 1 byte of memory
+	Byte& operator[](u32 Address)
+	{
+		return DATA[Address];
+
 	}
 
 };
@@ -53,8 +60,10 @@ struct CPU
 	
 
 	//opcodes
-
 	static constexpr Byte INS_LDA_IM = 0xA9;		//INSert value to LoaD Accumulator by IMmediate mode
+	static constexpr Byte INS_LDA_ZP = 0xA5;		// INSert value to Load Accumulator by Zero Page addressing mode 
+	static constexpr Byte INS_LDA_ZPX = 0xB5;		// INSert value to Load Accumulator by Zero Page X  addressing mode 
+	
 	void Reset(MEM& Memory)
 	{
 		PC = 0xFFFC;
@@ -65,39 +74,77 @@ struct CPU
 		Memory.initialise();
 
 	}
-	Byte FetchByte( MEM& memory)
+	Byte FetchByte(u32& cycles,  MEM& memory)
 	{
 		Byte DATA =  memory[PC];
 		PC++;
+		cycles--;
 		return DATA;
 	}
+	Byte ReadByte(u32& cycles, MEM& memory, Byte Address)
+	{
+		Byte DATA = memory[Address];
+		cycles--;
+		return DATA;
 
+	}
+	
 	void execute(u32 cycles, MEM& Memory)		// CPU has a clock (cycles) for fetching out memory. 
 	{
 		while (cycles > 0)
 		{
-			Byte Ins = FetchByte( Memory);		// instruction
+			Byte Ins = FetchByte(cycles,  Memory);		// instruction
 
 			switch (Ins)
 			{
 				case INS_LDA_IM:
 				{
-					Byte Value = FetchByte(Memory);
-					A = Value;
-					Z = (A == 0);
-					N = (A & 0b1000000) > 0;
+					Byte Value = FetchByte(cycles , Memory);
+					
+					
+					A = Value;		// Load accumulator with Value
+					
+					
+					Z = (A == 0);		// SET STATUS FLAGS
+					N = (A & 0b1000000) > 0;	
 
 				}break;
 
+
+				case INS_LDA_ZP:
+				{
+					Byte Zero_page_address = FetchByte(cycles, Memory);\
+
+					A = ReadByte(cycles, Memory, Zero_page_address);		// Load accumulator with value stored at zero page address 
+
+
+
+					Z = (A == 0);		// SET STATUS FLAGS
+					N = (A & 0b1000000) > 0;
+				}break;
+
+
+				case INS_LDA_ZPX:
+				{
+					Byte Zero_page_address = FetchByte(cycles, Memory);
+
+					Zero_page_address += X;
+					cycles--;
+
+
+					A = ReadByte(cycles, Memory, Zero_page_address);
+
+					Z = (A == 0);		// SET STATUS FLAGS
+					N = (A & 0b1000000) > 0;
+				}
 				default:
 				{
-					std::cout << "Instruction not handled";
+					std::cout << "Instruction not handled / supported yet";
 				}
 			}
 
 
 
-			cycles--;
 
 			
 
@@ -112,7 +159,13 @@ int main()
 	CPU cpu;
 	MEM MEMORY;
 	cpu.Reset(MEMORY);
-	cpu.execute(2, MEMORY);
+	MEMORY[0XFFFC] = cpu.INS_LDA_ZP;
+	MEMORY[0XFFFD] = 0X42;
+	MEMORY[0x0042] = 0x84;
+
+	cpu.execute(3, MEMORY);
+
+
 	return 0;
  
 }
