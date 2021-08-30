@@ -1,13 +1,13 @@
 #include <iostream>
 #include <stdlib.h>
-
+//using data types 
 using Byte = unsigned char;			// used for 8 bits 
 using word = unsigned short;		// used for 16 bits 
 using u32 = unsigned int;			// used for 32 bits 
 
-struct mem
+struct MEM
 {
-	static constexpr u32 MEM_MAX = 1024 * 64;
+	static constexpr u32 MEM_MAX = 1024 * 64;			//2^16
 	Byte DATA[MEM_MAX];
 	
 	void initialise()
@@ -18,6 +18,12 @@ struct mem
 
 		}
 
+	}
+
+	//read  1 byte of memory
+	Byte operator[](u32 Address) const
+	{
+		return DATA[Address];
 	}
 
 };
@@ -45,15 +51,57 @@ struct CPU
 	Byte V : 1;		//Overflow flag
 	Byte N : 1;		// Negative flag 
 	
-	void Reset(mem& Memory)
+
+	//opcodes
+
+	static constexpr Byte INS_LDA_IM = 0xA9;		//INSert value to LoaD Accumulator by IMmediate mode
+	void Reset(MEM& Memory)
 	{
 		PC = 0xFFFC;
 		SP = 0x0100;
 		C = Z = I = D = B = V = N = 0;
-		A = X = Y = 0;
+		A = X = Y = 0;		// initialise registers to 0;
 
 		Memory.initialise();
 
+	}
+	Byte FetchByte( MEM& memory)
+	{
+		Byte DATA =  memory[PC];
+		PC++;
+		return DATA;
+	}
+
+	void execute(u32 cycles, MEM& Memory)		// CPU has a clock (cycles) for fetching out memory. 
+	{
+		while (cycles > 0)
+		{
+			Byte Ins = FetchByte( Memory);		// instruction
+
+			switch (Ins)
+			{
+				case INS_LDA_IM:
+				{
+					Byte Value = FetchByte(Memory);
+					A = Value;
+					Z = (A == 0);
+					N = (A & 0b1000000) > 0;
+
+				}break;
+
+				default:
+				{
+					std::cout << "Instruction not handled";
+				}
+			}
+
+
+
+			cycles--;
+
+			
+
+		}
 	}
 
 };
@@ -62,7 +110,9 @@ struct CPU
 int main()
 {
 	CPU cpu;
-	mem MEMORY;
-	return 0; 
+	MEM MEMORY;
 	cpu.Reset(MEMORY);
+	cpu.execute(2, MEMORY);
+	return 0;
+ 
 }
